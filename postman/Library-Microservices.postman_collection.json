@@ -1,0 +1,291 @@
+{
+  "info": {
+    "_postman_id": "b1178a69-5d0d-4b17-a969-2ac9857e30aa",
+    "name": "Library Microservices",
+    "description": "An ordered end-to-end verification of the Library Microservices course project. Start all four services, then run this collection from top to bottom.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Gateway health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Gateway is healthy\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json().status).to.eql(\"UP\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actuator/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["actuator", "health"]
+        }
+      }
+    },
+    {
+      "name": "02 - Remove an old demo book if present",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Demo state is ready\", function () {",
+              "    pm.expect([200, 404]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/books/{{isbn}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "books", "{{isbn}}"]
+        }
+      }
+    },
+    {
+      "name": "03 - Create a book",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Book is created with full availability\", function () {",
+              "    pm.response.to.have.status(201);",
+              "    const book = pm.response.json();",
+              "    pm.expect(book.isbn).to.eql(pm.collectionVariables.get(\"isbn\"));",
+              "    pm.expect(book.availableCopies).to.eql(3);",
+              "    pm.expect(book.isAvailable).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isbn\": \"{{isbn}}\",\n  \"title\": \"Clean Code\",\n  \"author\": \"Robert C. Martin\",\n  \"category\": \"Programming\",\n  \"publishedYear\": 2008,\n  \"totalCopies\": 3\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/books",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "books"]
+        }
+      }
+    },
+    {
+      "name": "04 - List books",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Catalog contains the demo book\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    const books = pm.response.json();",
+              "    pm.expect(books.some(book => book.isbn === pm.collectionVariables.get(\"isbn\"))).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/books",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "books"]
+        }
+      }
+    },
+    {
+      "name": "05 - Borrow the book",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Borrowing is created\", function () {",
+              "    pm.response.to.have.status(201);",
+              "    const borrowing = pm.response.json();",
+              "    pm.expect(borrowing.status).to.eql(\"ACTIVE\");",
+              "    pm.expect(borrowing.lateFee).to.eql(0);",
+              "    pm.collectionVariables.set(\"borrowId\", borrowing.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isbn\": \"{{isbn}}\",\n  \"memberId\": \"{{memberId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/borrow",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "borrow"]
+        }
+      }
+    },
+    {
+      "name": "06 - List active borrowings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Active list contains the new borrowing\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    const records = pm.response.json();",
+              "    const borrowId = Number(pm.collectionVariables.get(\"borrowId\"));",
+              "    pm.expect(records.some(record => record.id === borrowId)).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/borrow/active",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "borrow", "active"]
+        }
+      }
+    },
+    {
+      "name": "07 - Return the book",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Borrowing is returned\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    const borrowing = pm.response.json();",
+              "    pm.expect(borrowing.status).to.eql(\"RETURNED\");",
+              "    pm.expect(borrowing.returnDate).to.not.eql(null);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/borrow/return/{{borrowId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "borrow", "return", "{{borrowId}}"]
+        }
+      }
+    },
+    {
+      "name": "08 - Get member history",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Member history contains the returned borrowing\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    const records = pm.response.json();",
+              "    const borrowId = Number(pm.collectionVariables.get(\"borrowId\"));",
+              "    pm.expect(records.some(record => record.id === borrowId && record.status === \"RETURNED\")).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/borrow/member/{{memberId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "borrow", "member", "{{memberId}}"]
+        }
+      }
+    },
+    {
+      "name": "09 - Delete the demo book",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Demo book is removed\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/books/{{isbn}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "books", "{{isbn}}"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "isbn",
+      "value": "9780132350884"
+    },
+    {
+      "key": "memberId",
+      "value": "M001"
+    },
+    {
+      "key": "borrowId",
+      "value": ""
+    }
+  ]
+}
